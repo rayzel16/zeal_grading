@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Attempt extends Model
 {
+    protected $fillable = [
+        'user_id',
+        'exam_id',
+        'score',
+        'started_at',
+        'finished_at'
+
+    ];
     public function user()
     {
         return $this->belongsTo(User::class);

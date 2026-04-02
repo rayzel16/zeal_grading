@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExamController;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/routes-view', function () {
     $routes = collect(Route::getRoutes())->map(function ($route) {
@@ -17,6 +18,21 @@ Route::get('/routes-view', function () {
 
     return view('routes.index', compact('routes'));
 });
+
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+
+    Route::get('/dashboard', function () {
+        return view('admin.dashboard');
+    })->name('admin.dashboard');
+
+});
+
+Route::get('/redirect', function () {
+    return Auth::user()->role === 'admin'
+        ? redirect()->route('admin.dashboard')
+        : redirect('/dashboard');
+})->middleware('auth')->name('redirect');
 
 
 Route::get('/', function () {
