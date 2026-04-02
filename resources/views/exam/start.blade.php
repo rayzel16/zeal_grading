@@ -1,16 +1,7 @@
-<form method="POST" action="{{ route('exam.submit', $attempt->id) }}">
+<h2>{{ $exam->title }}</h2>
+<p>{{ $exam->description }}</p>
+
+<form method="POST" action="{{ route('exam.start', $exam) }}">
     @csrf
-
-    @foreach($attempt->exam->questions as $question)
-        <p>{{ $question->question_text }}</p>
-
-        @foreach($question->answers as $answer)
-            <label>
-                <input type="radio" name="answers[{{ $question->id }}]" value="{{ $answer->id }}">
-                {{ $answer->answer_text }}
-            </label><br>
-        @endforeach
-    @endforeach
-
-    <button type="submit">Submit</button>
+    <button>Start Exam</button>
 </form>

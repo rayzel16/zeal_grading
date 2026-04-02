@@ -12,7 +12,7 @@
 <body class="bg-light">
 
     {{-- Navbar --}}
-    @include('layouts.navigation')
+    @include('admin.layouts.navigation')
 
     {{-- Page Heading --}}
     @isset($header)
@@ -30,4 +30,7 @@
 
     @yield('page-scripts')
 </body>
+<script>
+    console.log('JS Loaded');
+</script>
 </html>

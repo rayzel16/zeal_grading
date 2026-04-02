@@ -10,7 +10,8 @@ class Exam extends Model
     protected $fillable = [
         'title',
         'duration',
-        'code'
+        'code',
+        'description'
     ];
     public function questions()
     {

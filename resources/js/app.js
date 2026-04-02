@@ -1,7 +1,3 @@
-import './bootstrap';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import Alpine from 'alpinejs';
-
-window.Alpine = Alpine;
-
-Alpine.start();
+import './question-form';
+import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;

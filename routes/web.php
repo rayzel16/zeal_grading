@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\AdminExamController;
+use App\Http\Controllers\Admin\AdminQuestionController;
+use App\Http\Controllers\Admin\AdminAnswerController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\Student\ExamAttemptController;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/routes-view', function () {
@@ -20,17 +24,55 @@ Route::get('/routes-view', function () {
 });
 
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+Route::prefix('exam')->middleware('auth')->group(function () {
+
+    // join exam (by code)
+    Route::get('/join', fn() => view('exam.join'))->name('exam.join.form');
+    Route::post('/join', [ExamController::class, 'join'])->name('exam.join');
+
+    // start exam (uses EXAM, not attempt)
+    Route::post('/{exam}/start', [ExamAttemptController::class, 'start'])
+        ->name('exam.start');
+
+    // take exam (view questions)
+    Route::get('/attempt/{attempt}', [ExamAttemptController::class, 'take'])
+        ->name('exam.take');
+
+    // submit answers
+    Route::post('/attempt/{attempt}/submit', [ExamAttemptController::class, 'submit'])
+        ->name('exam.submit');
+
+    // result
+    Route::get('/attempt/{attempt}/result', [ExamAttemptController::class, 'result'])
+        ->name('exam.result');
+});
+
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('admin.dashboard');
 
+    Route::resource('exams', AdminExamController::class);
+
+    Route::prefix('exams/{exam}')
+    ->name('exams.')
+    ->group(function () {
+        Route::resource('questions', AdminQuestionController::class);
+    });
+
+    Route::prefix('questions/{question}')
+    ->name('questions.')
+    ->group(function () {
+        Route::resource('answers', AdminAnswerController::class);
+    });
+
 });
 
 Route::get('/redirect', function () {
     return Auth::user()->role === 'admin'
-        ? redirect()->route('admin.dashboard')
+        ? redirect()->route('admin.admin.dashboard')
         : redirect('/dashboard');
 })->middleware('auth')->name('redirect');
 
@@ -47,18 +89,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-
-Route::prefix('exam')->middleware('auth')->group(function () {
-
-    Route::get('/join', fn() => view('exam.join'))->name('exam.join.form');
-    Route::post('/join', [ExamController::class, 'join'])->name('exam.join');
-
-    Route::get('/{attempt}/start', [ExamController::class, 'start'])->name('exam.start');
-    Route::post('/{attempt}/submit', [ExamController::class, 'submit'])->name('exam.submit');
-    Route::get('/{attempt}/result', [ExamController::class, 'result'])->name('exam.result');
-
 });
 
 require __DIR__.'/auth.php';
