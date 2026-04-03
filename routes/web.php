@@ -95,4 +95,8 @@ Route::get('/student/attempts', [ExamAttemptController::class, 'history'])
     ->name('student.attempts')
     ->middleware('auth');
 
+Route::post('/attempt/{attempt}/violation',
+    [ExamAttemptController::class, 'logViolation']
+)->name('attempt.violation');
+
 require __DIR__.'/auth.php';

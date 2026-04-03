@@ -1,7 +1,13 @@
-<form method="POST" action="{{ route('exam.join') }}">
-    @csrf
+@extends('layouts.app')
 
-    <input type="text" name="code" placeholder="Enter Exam Code" required>
+@section('content')
+    <div class="container">
+        <form method="POST" action="{{ route('exam.join') }}">
+            @csrf
 
-    <button type="submit">Join Exam</button>
-</form>
+            <input type="text" name="code" placeholder="Enter Exam Code" required>
+
+            <button type="submit" class="btn btn-primary">Join Exam</button>
+        </form>
+    </div>
+@endsection

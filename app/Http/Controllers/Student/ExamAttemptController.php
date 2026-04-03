@@ -8,6 +8,8 @@ use App\Models\Exam;
 use App\Models\Attempt as ExamAttempt;
 use App\Models\AttemptAnswer;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ExamAttemptController extends Controller
 {
@@ -60,13 +62,32 @@ class ExamAttemptController extends Controller
 
     public function submit(Request $request, ExamAttempt $attempt)
     {
-
         if ($attempt->user_id !== Auth::id()) {
             abort(403);
         }
 
         if ($attempt->submitted_at) {
             return redirect()->route('exam.result', $attempt);
+        }
+
+        $violations = $this->getRealViolationCount($attempt);
+        $limit = $attempt->exam->violation_limit;
+
+        if ($violations >= $limit) {
+            $score = $attempt->answers()
+                ->whereHas('answer', function ($q) {
+                    $q->where('is_correct', true);
+                })
+                ->count();
+
+            $attempt->update([
+                'submitted_at' => now(),
+                'score' => $score,
+                'is_flagged' => true
+            ]);
+
+            return redirect()->route('exam.result', $attempt)
+                ->with('warning', 'Exam auto-submitted due to violations.');
         }
 
         if (!$request->has('answers')) {
@@ -85,22 +106,22 @@ class ExamAttemptController extends Controller
             );
         }
 
-     
         $score = $attempt->answers()
             ->whereHas('answer', function ($q) {
                 $q->where('is_correct', true);
             })
             ->count();
 
-
         $attempt->update([
             'submitted_at' => now(),
-            'score' => $score
+            'score' => $score,
+            'is_flagged' => $violations >= $limit
         ]);
 
         return redirect()->route('exam.result', $attempt);
     }
 
+    
     public function result(ExamAttempt $attempt)
     {
         if ($attempt->user_id !== Auth::id()) {
@@ -151,5 +172,63 @@ class ExamAttemptController extends Controller
         $exams = Exam::all();
 
         return view('student.exams.history', compact('attempts', 'exams', 'bestScores'));
+    }
+
+
+    public function logViolation(Request $request, ExamAttempt $attempt)
+    {
+        if ($attempt->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'type' => 'required|string',
+            'data' => 'nullable|string'
+        ]);
+
+        $data = $request->data;
+
+        if ($request->type === 'screenshot' && $data) {
+
+            if (strlen($data) > 5_000_000) {
+                return response()->json(['error' => 'Image too large'], 422);
+            }
+
+            $image = preg_replace('/^data:image\/\w+;base64,/', '', $data);
+            $image = base64_decode($image);
+
+            if ($image === false) {
+                return response()->json(['error' => 'Invalid image'], 422);
+            }
+
+            $user = Auth::user();
+            $filename = 'screenshots/' . $user->name . '_attempt_' . $attempt->id . '_' . Str::random(10) . '.png';
+
+            Storage::disk('public')->put($filename, $image);
+
+            $data = $filename;
+        }
+
+        $attempt->violations()->create([
+            'type' => $request->type,
+            'data' => $data
+        ]);
+
+        $violations = $this->getRealViolationCount($attempt);
+        $limit = $attempt->exam->violation_limit;
+
+        return response()->json([
+            'count' => $violations,
+            'limit' => $limit,
+            'exceeded' => $violations >= $limit
+        ]);
+    }
+
+
+    private function getRealViolationCount($attempt)
+    {
+        return $attempt->violations()
+            ->where('type', '!=', 'screenshot')
+            ->count();
     }
 }

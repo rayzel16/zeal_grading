@@ -1,46 +1,52 @@
-<h2>Result</h2>
+@extends('layouts.app')
 
-@php
-    $total = $attempt->exam->questions->count();
-    $score = $attempt->score;
-    $percentage = $total > 0 ? round(($score / $total) * 100) : 0;
-@endphp
 
-<p><strong>Score:</strong> {{ $score }} / {{ $total }} ({{ $percentage }}%)</p>
+@section('content')
 
-<hr>
+    <h2>Result</h2>
 
-@foreach($attempt->exam->questions as $index => $question)
     @php
-        $selectedAnswer = $attempt->answers
-            ->firstWhere('question_id', $question->id)?->answer_id;
+        $total = $attempt->exam->questions->count();
+        $score = $attempt->score;
+        $percentage = $total > 0 ? round(($score / $total) * 100) : 0;
     @endphp
 
-    <div style="margin-bottom: 20px;">
-        <p><strong>Q{{ $index + 1 }}:</strong> {{ $question->question_text }}</p>
+    <p><strong>Score:</strong> {{ $score }} / {{ $total }} ({{ $percentage }}%)</p>
 
-        @foreach($question->answers as $answer)
-            @php
-                $isSelected = $selectedAnswer == $answer->id;
-                $isCorrect = $answer->is_correct;
-            @endphp
+    <hr>
 
-            <p style="
-                padding: 5px;
-                border-radius: 5px;
-                background-color:
-                    {{ $isCorrect ? '#d4edda' : ($isSelected ? '#f8d7da' : '#f8f9fa') }};
-                color:
-                    {{ $isCorrect ? 'green' : ($isSelected ? 'red' : 'black') }};
-            ">
-                {{ $answer->answer_text }}
+    @foreach($attempt->exam->questions as $index => $question)
+        @php
+            $selectedAnswer = $attempt->answers
+                ->firstWhere('question_id', $question->id)?->answer_id;
+        @endphp
 
-                @if($isCorrect)
-                    ✅
-                @elseif($isSelected)
-                    ❌
-                @endif
-            </p>
-        @endforeach
-    </div>
-@endforeach
+        <div style="margin-bottom: 20px;">
+            <p><strong>Q{{ $index + 1 }}:</strong> {{ $question->question_text }}</p>
+
+            @foreach($question->answers as $answer)
+                @php
+                    $isSelected = $selectedAnswer == $answer->id;
+                    $isCorrect = $answer->is_correct;
+                @endphp
+
+                <p style="
+                    padding: 5px;
+                    border-radius: 5px;
+                    background-color:
+                        {{ $isCorrect ? '#d4edda' : ($isSelected ? '#f8d7da' : '#f8f9fa') }};
+                    color:
+                        {{ $isCorrect ? 'green' : ($isSelected ? 'red' : 'black') }};
+                ">
+                    {{ $answer->answer_text }}
+
+                    @if($isCorrect)
+                        ✅
+                    @elseif($isSelected)
+                        ❌
+                    @endif
+                </p>
+            @endforeach
+        </div>
+    @endforeach
+@endsection

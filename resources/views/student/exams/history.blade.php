@@ -59,7 +59,7 @@
                             <tr>
 
                                 <td>
-                                    <span class="badge bg-secondary">
+                                    <span class="badge bg-secondary col-4">
                                         #{{ $attempt->attempt_number }}
                                     </span>
                                 </td>
@@ -67,13 +67,13 @@
                                 <td>{{ $attempt->exam->title }}</td>
 
                                 <td>
-                                    <span class="badge bg-info">
+                                    <span>
                                         {{ $usedAttempts }} / {{ $attempt->exam->max_attempts }}
                                     </span>
                                 </td>
 
                                 <td>
-                                    <strong>{{ $attempt->score }}</strong>
+                                    <span>{{ $attempt->score }}</span>
 
                                     @if($attempt->score == ($bestScores[$attempt->exam_id] ?? null))
                                         <span class="badge bg-success">Best</span>
@@ -81,7 +81,7 @@
                                 </td>
 
                                 <td>
-                                    <span class="badge 
+                                    <span class="badge col-6
                                         {{ $percentage >= 75 ? 'bg-success' : 'bg-danger' }}">
                                         {{ $percentage }}%
                                     </span>

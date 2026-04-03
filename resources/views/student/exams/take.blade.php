@@ -1,24 +1,65 @@
-<h2>{{ $attempt->exam->title }}</h2>
+@extends('layouts.app')
 
-<form method="POST" action="{{ route('exam.submit', $attempt) }}">
-    @csrf
+@section('content')
 
-    @foreach($attempt->exam->questions as $index => $question)
+<div 
+    data-page="exam-take"
+    data-attempt-id="{{ $attempt->id }}"
+    data-csrf-token="{{ csrf_token() }}"
+>
+
+    <h2>Take Exam: {{ $attempt->exam->title }}</h2>
+
+    <!-- 🔒 FULLSCREEN GATE -->
+    <div id="fullscreenGate" style="text-align:center; margin-top:100px;">
+        <h2>This exam requires fullscreen mode</h2>
+        <button id="enterFullscreenBtn" class="btn btn-primary">
+            Enter Fullscreen
+        </button>
+    </div>
+
+    <!-- 📝 EXAM CONTENT -->
+    <div id="examContent" style="display:none;">
+
         <div>
-            <p><strong>Q{{ $index + 1 }}:</strong> {{ $question->question_text }}</p>
-
-            @foreach($question->answers as $answer)
-                <label>
-                    <input type="radio"
-                           name="answers[{{ $question->id }}]"
-                           value="{{ $answer->id }}"
-                           required>
-                    {{ $answer->answer_text }}
-                </label><br>
-            @endforeach
+            <p><strong>Exam Instructions:</strong></p>
+            <ul>
+                <li>Answer all questions to the best of your ability.</li>
+                <li>Do not refresh the page or navigate away during the exam.</li>
+                <li>Any violation of exam rules may result in disqualification.</li>
+                <li>Good luck and have fun!</li>
+            </ul>
         </div>
         <hr>
-    @endforeach
+        <br>
 
-    <button type="submit">Submit Exam</button>
-</form>
+        <div id="warningBox" style="display:none; color:red; font-weight:bold;"></div>
+
+        <form id="examForm" method="POST" action="{{ route('exam.submit', $attempt) }}">
+            @csrf
+
+            @foreach($attempt->exam->questions as $index => $question)
+                <div class="mb-4">
+                    <p><strong>Q{{ $index + 1 }}:</strong> {{ $question->question_text }}</p>
+
+                    @foreach($question->answers as $answer)
+                        <div>
+                            <label>
+                                <input type="radio"
+                                       name="answers[{{ $question->id }}]"
+                                       value="{{ $answer->id }}">
+                                {{ $answer->answer_text }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+            @endforeach
+
+            <button type="submit" class="btn btn-success">Submit Exam</button>
+        </form>
+
+    </div>
+
+</div>
+
+@endsection
