@@ -111,4 +111,45 @@ class ExamAttemptController extends Controller
 
         return view('student.exams.result', compact('attempt'));
     }
+
+
+    public function history(Request $request)
+    {
+        $query = ExamAttempt::with([
+            'exam',
+            'exam.questions',
+            'exam.attempts' => function ($q) {
+                $q->where('user_id', Auth::id())
+                ->whereNotNull('submitted_at');
+            }
+        ])
+        ->where('user_id', Auth::id())
+        ->whereNotNull('submitted_at');
+
+        if ($request->filled('exam_id')) {
+            $query->where('exam_id', $request->exam_id);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('submitted_at', $request->date);
+        }
+
+        $attempts = $query->orderByDesc('submitted_at')
+            ->paginate(7)
+            ->withQueryString();
+
+        foreach ($attempts as $index => $attempt) {
+            $attempt->attempt_number = $attempts->firstItem() + $index;
+        }
+
+        $bestScores = ExamAttempt::where('user_id', Auth::id())
+            ->whereNotNull('submitted_at')
+            ->selectRaw('exam_id, MAX(score) as best_score')
+            ->groupBy('exam_id')
+            ->pluck('best_score', 'exam_id');
+
+        $exams = Exam::all();
+
+        return view('student.exams.history', compact('attempts', 'exams', 'bestScores'));
+    }
 }

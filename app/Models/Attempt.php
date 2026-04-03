@@ -13,10 +13,17 @@ class Attempt extends Model
         'user_id',
         'exam_id',
         'score',
-        'started_at',
+        'started_at' ,
         'finished_at',
         'submitted_at'
     ];
+
+    protected $casts = [
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
+        'submitted_at' => 'datetime',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
