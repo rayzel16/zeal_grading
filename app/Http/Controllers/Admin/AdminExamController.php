@@ -39,7 +39,8 @@ class AdminExamController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'duration' => $request->duration,
-            'code' => strtoupper(str()->random(6)), // auto code
+            'code' => strtoupper(str()->random(6)),
+            'max_attempts' => $request->max_attempts
         ]);
 
         return redirect()->route('admin.exams.index')
@@ -74,12 +75,14 @@ class AdminExamController extends Controller
         $request->validate([
             'title' => 'required',
             'duration' => 'required|integer|min:1',
+            'max_attempts' => 'required|integer|min:1',
         ]);
 
         $exam->update([
             'title' => $request->title,
             'description' => $request->description,
             'duration' => $request->duration,
+            'max_attempts' => $request->max_attempts
         ]);
 
         return redirect()->route('admin.exams.index')

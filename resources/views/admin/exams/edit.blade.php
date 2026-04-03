@@ -38,6 +38,15 @@
             >
         </div>
 
+        <div class="mb-3">
+            <label>Max Attempts</label>
+            <input type="number" 
+                name="max_attempts" 
+                class="form-control" 
+                value="{{ old('max_attempts', $exam->max_attempts) }}" 
+                min="1" required>
+        </div>
+
         <button class="btn btn-success">Update</button>
     </form>
 </div>

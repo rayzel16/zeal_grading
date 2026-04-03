@@ -11,11 +11,17 @@ class Exam extends Model
         'title',
         'duration',
         'code',
-        'description'
+        'description',
+        'max_attempts'
     ];
     public function questions()
     {
         return $this->hasMany(Question::class);
+    }
+
+    public function attempts()
+    {
+        return $this->hasMany(Attempt::class);
     }
 }
 

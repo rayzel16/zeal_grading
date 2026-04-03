@@ -16,6 +16,7 @@
                 <th>Title</th>
                 <th>Code</th>
                 <th>Duration</th>
+                <th>Attempts</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -25,6 +26,7 @@
                 <td>{{ $exam->title }}</td>
                 <td>{{ $exam->code }}</td>
                 <td>{{ $exam->duration }} mins</td>
+                <td>{{ $exam->max_attempts }}</td>
                 <td>
                     <a href="{{ route('admin.exams.edit', $exam) }}" 
                     class="btn btn-warning btn-sm">Edit</a>

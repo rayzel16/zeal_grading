@@ -14,8 +14,8 @@ class Attempt extends Model
         'exam_id',
         'score',
         'started_at',
-        'finished_at'
-
+        'finished_at',
+        'submitted_at'
     ];
     public function user()
     {
