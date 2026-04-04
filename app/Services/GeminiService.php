@@ -17,7 +17,7 @@ class GeminiService implements AIProvider
         $this->apiKey = config('services.gemini.key');
 
         // ✅ Use stable model (avoid preview issues)
-        $this->endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+        $this->endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
     }
 
     public function generateQuestions($topic, $difficulty = 'medium', $count = 5)

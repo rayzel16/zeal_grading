@@ -83,6 +83,12 @@
                         Remove
                     </button>
 
+                    <button wire:click="loadToManual({{ $qIndex }})"
+                        class="btn btn-sm btn-info">
+                    ✍️ Edit in Manual Form
+                    </button>
+
+
                 </div>
             @endforeach
 
@@ -97,12 +103,6 @@
             <button wire:click="discardGenerated" class="btn btn-danger">
                 Discard
             </button>
-
-            <button wire:click="loadToManual({{ $qIndex }})"
-                    class="btn btn-sm btn-info">
-                ✍️ Edit in Manual Form
-            </button>
-
         </div>
     @endif
 
