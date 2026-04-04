@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'ai' => [
+    'default' => env('AI_DRIVER', 'gemini'),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+
 ];
