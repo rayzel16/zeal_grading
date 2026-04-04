@@ -8,6 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     @yield('page-styles')
+    @livewireStyles
 </head>
 <body class="bg-light">
 
@@ -29,5 +30,6 @@
     </main>
 
     @yield('page-scripts')
+    @livewireScripts
 </body>
 </html>
