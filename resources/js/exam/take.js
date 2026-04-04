@@ -4,14 +4,16 @@ export function initExamProctor(attemptId, csrfToken) {
     let violationLimit = 0;
     let isSubmitting = false;
 
+    let webcamEnabled = false;
+    let webcamChecked = false;
+    let allowCameraGrace = true;
+
     const examContent = document.getElementById('examContent');
     const gate = document.getElementById('fullscreenGate');
     const btn = document.getElementById('enterFullscreenBtn');
     const form = document.getElementById('examForm');
 
-    // ==============================
-    // 🔓 ENTER FULLSCREEN
-    // ==============================
+
     btn?.addEventListener('click', async () => {
         try {
             await document.documentElement.requestFullscreen();
@@ -24,11 +26,12 @@ export function initExamProctor(attemptId, csrfToken) {
         }
     });
 
-    // ==============================
-    // 🚨 EXIT FULLSCREEN
-    // ==============================
+  
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement && !isSubmitting) {
+
+            if (allowCameraGrace) return;
+
             logViolation('exit_fullscreen');
 
             examContent.style.display = 'none';
@@ -36,9 +39,7 @@ export function initExamProctor(attemptId, csrfToken) {
         }
     });
 
-    // ==============================
-    // 🔧 LOG VIOLATION
-    // ==============================
+
     async function logViolation(type, data = null) {
 
         if (isSubmitting) return;
@@ -75,9 +76,7 @@ export function initExamProctor(attemptId, csrfToken) {
         }
     }
 
-    // ==============================
-    // ⚠️ WARNING UI
-    // ==============================
+
     function showWarning(type) {
         const box = document.getElementById('warningBox');
         if (!box) return;
@@ -86,39 +85,74 @@ export function initExamProctor(attemptId, csrfToken) {
         box.style.display = 'block';
     }
 
-    // ==============================
-    // 🚨 DETECTIONS
-    // ==============================
+
     document.addEventListener("visibilitychange", () => {
-        if (document.hidden) logViolation('tab_switch');
+        if (document.hidden) {
+            if (allowCameraGrace) return;
+            logViolation('tab_switch');
+        }
     });
 
     window.addEventListener("blur", () => {
+        if (allowCameraGrace) return;
         logViolation('window_blur');
     });
 
     document.addEventListener('contextmenu', (e) => {
         e.preventDefault();
+        if (allowCameraGrace) return;
         logViolation('right_click');
     });
 
-    document.addEventListener('copy', () => logViolation('copy'));
-    document.addEventListener('paste', () => logViolation('paste'));
+    document.addEventListener('copy', () => {
+        if (allowCameraGrace) return;
+        logViolation('copy');
+    });
 
-    // ==============================
-    // 📸 WEBCAM SETUP
-    // ==============================
+    document.addEventListener('paste', () => {
+        if (allowCameraGrace) return;
+        logViolation('paste');
+    });
+
+
     const video = document.createElement('video');
     const canvas = document.createElement('canvas');
-    let webcamEnabled = false;
 
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
             video.srcObject = stream;
             video.play();
+
             webcamEnabled = true;
+            webcamChecked = true;
+            allowCameraGrace = false;
+
+   
+            const track = stream.getVideoTracks()[0];
+            if (track) {
+                track.onended = () => {
+                    if (isSubmitting) return;
+                    logViolation('webcam_turned_off');
+                };
+            }
         })
-        .catch(() => logViolation('webcam_denied'));
+        .catch(err => {
+            webcamChecked = true;
+
+            if (!allowCameraGrace) {
+                logViolation('webcam_denied');
+            }
+        });
+
+
+    setTimeout(() => {
+        allowCameraGrace = false;
+
+        if (!webcamEnabled && webcamChecked) {
+            logViolation('webcam_denied');
+        }
+    }, 10000);
+
 
     function captureScreenshot() {
         if (!webcamEnabled || !video.videoWidth || isSubmitting) return;
@@ -136,7 +170,7 @@ export function initExamProctor(attemptId, csrfToken) {
 
     function randomShot() {
 
-        if (!isSubmitting && document.fullscreenElement) {
+        if (!isSubmitting && document.fullscreenElement && webcamEnabled) {
             captureScreenshot();
         }
 
