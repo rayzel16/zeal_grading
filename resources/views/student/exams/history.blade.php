@@ -42,7 +42,7 @@
                             <th>Score</th>
                             <th>%</th>
                             <th>Date</th>
-                            <th></th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -95,6 +95,10 @@
                                     <a href="{{ route('exam.result', $attempt) }}" 
                                        class="btn btn-sm btn-outline-primary">
                                         View
+                                    </a>
+                                    <a href="{{ route('attempt.display.StudentDisplayViolation', $attempt) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        Violations
                                     </a>
                                 </td>
                             </tr>

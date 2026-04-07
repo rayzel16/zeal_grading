@@ -99,4 +99,8 @@ Route::post('/attempt/{attempt}/violation',
     [ExamAttemptController::class, 'logViolation']
 )->name('attempt.violation');
 
+Route::get('/attempt/{attempt}/StudentDisplayViolation',
+    [ExamAttemptController::class, 'StudentDisplayViolation']
+)->name('attempt.display.StudentDisplayViolation');
+
 require __DIR__.'/auth.php';

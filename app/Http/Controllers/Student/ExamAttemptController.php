@@ -225,6 +225,18 @@ class ExamAttemptController extends Controller
     }
 
 
+    public function StudentDisplayViolation(ExamAttempt $attempt)
+    {
+        if ($attempt->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $violations = $attempt->violations()->where('type', '!=', 'screenshot')->get();
+
+        return view('student.exams.violations', compact('attempt', 'violations'));
+    }
+
+
     private function getRealViolationCount($attempt)
     {
         return $attempt->violations()
