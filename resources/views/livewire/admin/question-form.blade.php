@@ -9,11 +9,18 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    
     <x-ai-loading />
 
+    <!-- ================= AI GENERATOR ================= -->
     <div class="card p-3 mb-3">
         <h5>🤖 AI Generator</h5>
+
+        <!-- TYPE -->
+        <select wire:model="type" class="form-control mb-2">
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="essay">Essay</option>
+            <option value="identification">Identification</option>
+        </select>
 
         <input type="text" wire:model="topic" class="form-control mb-2" placeholder="Topic">
 
@@ -29,18 +36,12 @@
                 wire:loading.attr="disabled"
                 class="btn btn-primary">
 
-            <span wire:loading.remove>
-                🤖 Generate
-            </span>
-
-            <span wire:loading>
-                ⏳ Generating...
-            </span>
-
+            <span wire:loading.remove>🤖 Generate</span>
+            <span wire:loading>⏳ Generating...</span>
         </button>
     </div>
 
-    <!-- ================= PREVIEW ================= -->
+    <!-- ================= AI PREVIEW ================= -->
     @if(!empty($generatedQuestions))
         <div class="card p-3 mb-3">
 
@@ -53,41 +54,53 @@
                     <textarea wire:model="generatedQuestions.{{ $qIndex }}.question"
                               class="form-control mb-2"></textarea>
 
-                    <!-- CHOICES -->
-                    @foreach($q['choices'] as $cIndex => $choice)
-                        <div class="input-group mb-2">
+                    <!-- ================= MULTIPLE CHOICE ================= -->
+                    @if($type === 'multiple_choice')
+                        @foreach($q['choices'] as $cIndex => $choice)
+                            <div class="input-group mb-2">
 
-                            <div class="input-group-text">
-                                <input type="radio"
-                                       wire:model="generatedQuestions.{{ $qIndex }}.correct_index"
-                                       value="{{ $cIndex }}">
+                                <div class="input-group-text">
+                                    <input type="radio"
+                                           wire:model="generatedQuestions.{{ $qIndex }}.correct_index"
+                                           value="{{ $cIndex }}">
+                                </div>
+
+                                <input type="text"
+                                       wire:model="generatedQuestions.{{ $qIndex }}.choices.{{ $cIndex }}"
+                                       class="form-control">
                             </div>
+                        @endforeach
 
-                            <input type="text"
-                                   wire:model="generatedQuestions.{{ $qIndex }}.choices.{{ $cIndex }}"
-                                   class="form-control">
+                        <button wire:click="addGeneratedChoice({{ $qIndex }})"
+                                class="btn btn-sm btn-secondary mb-2">
+                            + Add Choice
+                        </button>
+
+                        <!-- EXPLANATION -->
+                        <textarea wire:model="generatedQuestions.{{ $qIndex }}.explanation"
+                                  class="form-control mb-2"
+                                  placeholder="Explanation"></textarea>
+                    @endif
+
+                    <!-- ================= ESSAY / IDENTIFICATION ================= -->
+                    @if(in_array($type, ['essay', 'identification']))
+                        <div class="mb-2">
+                            <label>Expected Answer</label>
+                            <textarea wire:model="generatedQuestions.{{ $qIndex }}.expected_answer"
+                                      class="form-control"></textarea>
                         </div>
-                    @endforeach
+                    @endif
 
-                    <button wire:click="addGeneratedChoice({{ $qIndex }})"
-                            class="btn btn-sm btn-secondary mb-2">
-                        + Add Choice
-                    </button>
-
-                    <!-- EXPLANATION -->
-                    <textarea wire:model="generatedQuestions.{{ $qIndex }}.explanation"
-                              class="form-control mb-2"></textarea>
-
+                    <!-- ACTIONS -->
                     <button wire:click="removeGenerated({{ $qIndex }})"
                             class="btn btn-sm btn-danger">
                         Remove
                     </button>
 
                     <button wire:click="loadToManual({{ $qIndex }})"
-                        class="btn btn-sm btn-info">
-                    ✍️ Edit in Manual Form
+                            class="btn btn-sm btn-info">
+                        ✍️ Edit in Manual Form
                     </button>
-
 
                 </div>
             @endforeach
@@ -110,42 +123,65 @@
     <hr class="my-4">
     <h4>✍️ Create Manually</h4>
 
-    <!-- ================= MANUAL FORM ================= -->
+    <!-- ================= TYPE SELECT ================= -->
+    <div class="mb-3">
+        <label>Question Type</label>
+        <select wire:model="type" class="form-control">
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="essay">Essay</option>
+            <option value="identification">Identification</option>
+        </select>
+    </div>
+
+    <!-- ================= QUESTION ================= -->
     <div class="mb-3">
         <label>Question</label>
         <textarea wire:model="question" class="form-control"></textarea>
     </div>
 
-    <div class="mb-3">
-        <label>Choices</label>
+    <!-- ================= MULTIPLE CHOICE ================= -->
+    @if($type === 'multiple_choice')
+        <div class="mb-3">
+            <label>Choices</label>
 
-        @foreach($choices as $index => $choice)
-            <div class="input-group mb-2">
+            @foreach($choices as $index => $choice)
+                <div class="input-group mb-2">
 
-                <div class="input-group-text">
-                    <input type="radio" wire:model="correct_answer" value="{{ $index }}">
+                    <div class="input-group-text">
+                        <input type="radio" wire:model="correct_answer" value="{{ $index }}">
+                    </div>
+
+                    <input type="text"
+                           wire:model="choices.{{ $index }}"
+                           class="form-control">
+
+                    <button type="button"
+                            wire:click="removeChoice({{ $index }})"
+                            class="btn btn-danger">
+                        X
+                    </button>
                 </div>
+            @endforeach
 
-                <input type="text"
-                       wire:model="choices.{{ $index }}"
-                       class="form-control">
+            <button type="button"
+                    wire:click="addChoice"
+                    class="btn btn-primary btn-sm">
+                + Add Choice
+            </button>
+        </div>
+    @endif
 
-                <button type="button"
-                        wire:click="removeChoice({{ $index }})"
-                        class="btn btn-danger">
-                    X
-                </button>
-            </div>
-        @endforeach
+    <!-- ================= ESSAY / IDENTIFICATION ================= -->
+    @if(in_array($type, ['essay', 'identification']))
+        <div class="mb-3">
+            <label>Expected Answer</label>
+            <textarea wire:model="expected_answer" class="form-control"></textarea>
+        </div>
+    @endif
 
-        <button type="button"
-                wire:click="addChoice"
-                class="btn btn-primary btn-sm">
-            + Add Choice
-        </button>
-    </div>
-
+    <!-- ================= SAVE ================= -->
     <button type="button" wire:click="save" class="btn btn-success">
-        Save Manual Question
+        Save Question
     </button>
+
 </div>

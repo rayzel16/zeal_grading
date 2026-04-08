@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('exam_id')->constrained()->cascadeOnDelete();
             $table->text('question_text');
+            $table->text('expected_answer')->nullable();
+            $table->string('type')->default('multiple_choice'); 
             $table->timestamps();
         });
     }

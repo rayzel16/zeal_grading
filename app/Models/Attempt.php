@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Models\User;
 use App\Models\Exam;
-use App\Models\AttemptAnswer;
 use App\Models\AttemptViolation;
+use App\Models\QuestionResponse;
 use Illuminate\Database\Eloquent\Model;
 
 class Attempt extends Model
@@ -35,13 +35,13 @@ class Attempt extends Model
         return $this->belongsTo(Exam::class);
     }
 
-    public function answers()
-    {
-        return $this->hasMany(AttemptAnswer::class, 'attempt_id');
-    }
-
     public function violations()
     {
         return $this->hasMany(AttemptViolation::class);
+    }
+
+    public function responses()
+    {
+        return $this->hasMany(QuestionResponse::class, 'attempt_id');
     }
 }

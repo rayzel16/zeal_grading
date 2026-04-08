@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Attempt;
+use App\Models\QuestionResponse;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -34,5 +35,10 @@ class User extends Authenticatable
     public function attempts()
     {
         return $this->hasMany(Attempt::class);
+    }
+
+    public function questionResponses()
+    {
+        return $this->hasMany(QuestionResponse::class);
     }
 }

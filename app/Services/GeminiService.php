@@ -16,32 +16,68 @@ class GeminiService implements AIProvider
     {
         $this->apiKey = config('services.gemini.key');
 
-        // ✅ Use stable model (avoid preview issues)
+        // Stable model
         $this->endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
     }
 
-    public function generateQuestions($topic, $difficulty = 'medium', $count = 5)
+    /**
+     * Generate Questions (MCQ, Essay, Identification)
+     */
+    public function generateQuestions($topic, $difficulty = 'medium', $count = 5, $type = 'multiple_choice')
     {
-        // ✅ FIX: use HEREDOC instead of backticks
+        // =========================
+        // 🎯 Dynamic Format
+        // =========================
+        if ($type === 'multiple_choice') {
+            $format = <<<FORMAT
+[
+    {
+        "question": "...",
+        "choices": ["A", "B", "C", "D"],
+        "correct_index": 0,
+        "explanation": "..."
+    }
+]
+FORMAT;
+        }
+
+        if ($type === 'essay') {
+            $format = <<<FORMAT
+[
+    {
+        "question": "...",
+        "expected_answer": "..."
+    }
+]
+FORMAT;
+        }
+
+        if ($type === 'identification') {
+            $format = <<<FORMAT
+[
+    {
+        "question": "...",
+        "expected_answer": "..."
+    }
+]
+FORMAT;
+        }
+
+        // =========================
+        // 🧠 Prompt
+        // =========================
         $prompt = <<<PROMPT
-            Generate {$count} multiple choice questions about {$topic}.
-            Difficulty: {$difficulty}
+Generate {$count} {$type} questions about {$topic}.
+Difficulty: {$difficulty}
 
-            IMPORTANT:
-            - Return ONLY a valid JSON array
-            - No markdown, no backticks, no extra text
-            - Ensure valid JSON (no trailing commas)
+IMPORTANT:
+- Return ONLY a valid JSON array
+- No markdown, no backticks, no explanation outside JSON
+- Ensure valid JSON (no trailing commas)
 
-            Format:
-            [
-                {
-                    "question": "...",
-                    "choices": ["A", "B", "C", "D"],
-                    "correct_index": 0,
-                    "explanation": "..."
-                }
-            ]
-            PROMPT;
+Format:
+{$format}
+PROMPT;
 
         try {
             $start = microtime(true);
@@ -60,7 +96,6 @@ class GeminiService implements AIProvider
                     ]
                 ]);
 
-            // ⏱ Log response time
             Log::info('Gemini response time: ' . (microtime(true) - $start) . 's');
 
             if (!$response->successful()) {
@@ -80,11 +115,13 @@ class GeminiService implements AIProvider
                 return null;
             }
 
-            // ✅ Clean markdown if present
+            // =========================
+            // 🧹 Clean AI Output
+            // =========================
             $text = preg_replace('/```json|```/', '', $text);
             $text = trim($text);
 
-            // ✅ Extract JSON safely (handles messy AI output)
+            // Extract JSON safely
             preg_match('/\[\s*{.*}\s*\]/s', $text, $matches);
             $jsonString = $matches[0] ?? null;
 
@@ -103,20 +140,30 @@ class GeminiService implements AIProvider
                 return null;
             }
 
-            // ✅ Normalize structure
+            // =========================
+            // 🔄 Normalize Data
+            // =========================
             foreach ($decoded as &$item) {
-                $item['question'] = $item['question'] ?? '';
-                $item['choices'] = $item['choices'] ?? [];
 
-                // Ensure exactly 4 choices
-                while (count($item['choices']) < 4) {
-                    $item['choices'][] = '';
+                // Common
+                $item['question'] = $item['question'] ?? '';
+
+                if ($type === 'multiple_choice') {
+                    $item['choices'] = $item['choices'] ?? [];
+
+                    // Ensure 4 choices
+                    while (count($item['choices']) < 4) {
+                        $item['choices'][] = '';
+                    }
+
+                    $item['choices'] = array_slice($item['choices'], 0, 4);
+                    $item['correct_index'] = $item['correct_index'] ?? 0;
+                    $item['explanation'] = $item['explanation'] ?? '';
                 }
 
-                $item['choices'] = array_slice($item['choices'], 0, 4);
-
-                $item['correct_index'] = $item['correct_index'] ?? 0;
-                $item['explanation'] = $item['explanation'] ?? '';
+                if (in_array($type, ['essay', 'identification'])) {
+                    $item['expected_answer'] = $item['expected_answer'] ?? '';
+                }
             }
 
             return $decoded;

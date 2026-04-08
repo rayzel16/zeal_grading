@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\Attempt as ExamAttempt;
-use App\Models\AttemptAnswer;
+use App\Models\Question;
+use App\Models\QuestionResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -62,65 +63,74 @@ class ExamAttemptController extends Controller
 
     public function submit(Request $request, ExamAttempt $attempt)
     {
+        // 🔒 सुरक्षा: ensure owner
         if ($attempt->user_id !== Auth::id()) {
             abort(403);
         }
 
-        if ($attempt->submitted_at) {
-            return redirect()->route('exam.result', $attempt);
-        }
+        // 📥 Get all answers
+        $answers = $request->input('answers', []);
 
-        $violations = $this->getRealViolationCount($attempt);
-        $limit = $attempt->exam->violation_limit;
+        foreach ($answers as $questionId => $value) {
 
-        if ($violations >= $limit) {
-            $score = $attempt->answers()
-                ->whereHas('answer', function ($q) {
-                    $q->where('is_correct', true);
-                })
-                ->count();
+            $question = Question::with('answers')->find($questionId);
 
-            $attempt->update([
-                'submitted_at' => now(),
-                'score' => $score,
-                'is_flagged' => true
-            ]);
+            if (!$question) continue;
 
-            return redirect()->route('exam.result', $attempt)
-                ->with('warning', 'Exam auto-submitted due to violations.');
-        }
+            $score = 0;
+            $answerId = null;
+            $answerText = null;
 
-        if (!$request->has('answers')) {
-            return back()->with('error', 'Please answer at least one question.');
-        }
+            // ================= MULTIPLE CHOICE =================
+            if ($question->type === 'multiple_choice') {
 
-        foreach ($request->answers as $questionId => $answerId) {
-            AttemptAnswer::updateOrCreate(
+                $answerId = $value;
+
+                $selectedAnswer = $question->answers->firstWhere('id', $value);
+                $score = $selectedAnswer && $selectedAnswer->is_correct ? 1 : 0;
+            }
+
+            // ================= IDENTIFICATION =================
+            elseif ($question->type === 'identification') {
+
+                $answerText = $value;
+
+                $userAnswer = strtolower(trim($value));
+                $correctAnswer = strtolower(trim($question->expected_answer));
+
+                // exact match (you can upgrade later)
+                $score = $userAnswer === $correctAnswer ? 1 : 0;
+            }
+
+            // ================= ESSAY =================
+            elseif ($question->type === 'essay') {
+
+                $answerText = $value;
+
+                // not graded yet
+                $score = null;
+            }
+
+            // ================= SAVE =================
+            QuestionResponse::updateOrCreate(
                 [
                     'attempt_id' => $attempt->id,
                     'question_id' => $questionId,
                 ],
                 [
+                    'user_id' => Auth::id(),
                     'answer_id' => $answerId,
+                    'answer_text' => $answerText,
+                    'score' => $score
                 ]
             );
         }
 
-        $score = $attempt->answers()
-            ->whereHas('answer', function ($q) {
-                $q->where('is_correct', true);
-            })
-            ->count();
+        $attempt->score = $attempt->responses()->sum('score');
+        $attempt->save();
 
-        $attempt->update([
-            'submitted_at' => now(),
-            'score' => $score,
-            'is_flagged' => $violations >= $limit
-        ]);
-
-        return redirect()->route('exam.result', $attempt);
+        return redirect()->route('exam.result', $attempt->id);
     }
-
     
     public function result(ExamAttempt $attempt)
     {
@@ -128,7 +138,7 @@ class ExamAttemptController extends Controller
             abort(403);
         }
 
-        $attempt->load('exam.questions.answers', 'answers.answer');
+        $attempt->load('exam.questions.answers', 'responses.answer');
 
         return view('student.exams.result', compact('attempt'));
     }

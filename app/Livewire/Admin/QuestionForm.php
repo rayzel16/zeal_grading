@@ -10,49 +10,99 @@ class QuestionForm extends Component
 {
     public $exam;
 
-    // Manual form
+    // =========================
+    // MANUAL FORM
+    // =========================
     public $question = '';
     public $choices = [''];
     public $correct_answer = null;
+    public $expected_answer = '';
+    public $type = 'multiple_choice';
 
+    // =========================
     // AI
+    // =========================
     public $topic = '';
     public $difficulty = 'medium';
     public $question_count = 5;
     public $generatedQuestions = [];
+
+    // =========================
+    // TYPE SWITCH HANDLER
+    // =========================
+    public function updatedType()
+    {
+        $this->reset([
+            'choices',
+            'correct_answer',
+            'expected_answer',
+            'generatedQuestions' // 🔥 prevents mismatch bugs
+        ]);
+
+        $this->choices = [''];
+    }
 
     public function mount(Exam $exam)
     {
         $this->exam = $exam;
     }
 
+    // =========================
+    // SAVE MANUAL
+    // =========================
     public function save()
     {
-        $this->validate([
+        $rules = [
             'question' => 'required',
-            'choices' => 'required|array|min:1',
-            'choices.*' => 'required|string',
-            'correct_answer' => 'required'
-        ]);
+            'type' => 'required'
+        ];
 
-        $question = $this->exam->questions()->create([
-            'question_text' => $this->question
-        ]);
-
-        foreach ($this->choices as $index => $choice) {
-            $question->answers()->create([
-                'answer_text' => $choice,
-                'is_correct' => $this->correct_answer == $index
-            ]);
+        if ($this->type === 'multiple_choice') {
+            $rules['choices'] = 'required|array|min:1';
+            $rules['choices.*'] = 'required|string';
+            $rules['correct_answer'] = 'required';
         }
 
-        // Reset form
-        $this->reset(['question', 'choices', 'correct_answer']);
+        if (in_array($this->type, ['essay', 'identification'])) {
+            $rules['expected_answer'] = 'required|string';
+        }
+
+        $this->validate($rules);
+
+        $question = $this->exam->questions()->create([
+            'question_text' => $this->question,
+            'type' => $this->type,
+            'expected_answer' => $this->expected_answer ?? null
+        ]);
+
+        // Multiple Choice Answers
+        if ($this->type === 'multiple_choice') {
+            foreach ($this->choices as $index => $choice) {
+                $question->answers()->create([
+                    'answer_text' => $choice,
+                    'is_correct' => $this->correct_answer == $index
+                ]);
+            }
+        }
+
+        // Reset
+        $this->reset([
+            'question',
+            'choices',
+            'correct_answer',
+            'expected_answer'
+        ]);
+
         $this->choices = [''];
+        $this->type = 'multiple_choice';
+        $this->generatedQuestions = [];
 
         session()->flash('success', 'Question saved!');
     }
 
+    // =========================
+    // MANUAL CHOICES
+    // =========================
     public function addChoice()
     {
         $this->choices[] = '';
@@ -63,8 +113,9 @@ class QuestionForm extends Component
         unset($this->choices[$index]);
         $this->choices = array_values($this->choices);
     }
+
     // =========================
-    // AI GENERATE (PREVIEW)
+    // AI GENERATE
     // =========================
     public function generateBulk(AIService $ai)
     {
@@ -75,7 +126,8 @@ class QuestionForm extends Component
         $results = $ai->generateQuestions(
             $this->topic ?: 'general knowledge',
             $this->difficulty,
-            $this->question_count
+            $this->question_count,
+            $this->type
         );
 
         if (!$results) {
@@ -87,26 +139,31 @@ class QuestionForm extends Component
     }
 
     // =========================
-    // APPROVE & SAVE
+    // APPROVE AI
     // =========================
     public function approveGenerated()
     {
         foreach ($this->generatedQuestions as $item) {
 
-            if (empty($item['question']) || empty($item['choices'])) {
+            if (empty($item['question'])) {
                 continue;
             }
 
             $question = $this->exam->questions()->create([
-                'question_text' => $item['question']
+                'question_text' => $item['question'],
+                'type' => $this->type,
+                'expected_answer' => $item['expected_answer'] ?? null
             ]);
 
-            foreach ($item['choices'] as $index => $choice) {
-                $question->answers()->create([
-                    'answer_text' => $choice,
-                    'is_correct' => ($item['correct_index'] == $index),
-                    'explanation' => $item['explanation'] ?? null
-                ]);
+            // Multiple Choice
+            if ($this->type === 'multiple_choice' && !empty($item['choices'])) {
+                foreach ($item['choices'] as $index => $choice) {
+                    $question->answers()->create([
+                        'answer_text' => $choice,
+                        'is_correct' => ($item['correct_index'] == $index),
+                        'explanation' => $item['explanation'] ?? null
+                    ]);
+                }
             }
         }
 
@@ -139,6 +196,9 @@ class QuestionForm extends Component
         $this->generatedQuestions[$qIndex]['choices'][] = '';
     }
 
+    // =========================
+    // LOAD TO MANUAL (FIXED)
+    // =========================
     public function loadToManual($index)
     {
         $item = $this->generatedQuestions[$index] ?? null;
@@ -146,8 +206,15 @@ class QuestionForm extends Component
         if (!$item) return;
 
         $this->question = $item['question'] ?? '';
-        $this->choices = $item['choices'] ?? [''];
-        $this->correct_answer = $item['correct_index'] ?? 0;
+
+        if ($this->type === 'multiple_choice') {
+            $this->choices = $item['choices'] ?? [''];
+            $this->correct_answer = $item['correct_index'] ?? 0;
+        }
+
+        if (in_array($this->type, ['essay', 'identification'])) {
+            $this->expected_answer = $item['expected_answer'] ?? '';
+        }
 
         session()->flash('success', 'Loaded into manual editor!');
     }

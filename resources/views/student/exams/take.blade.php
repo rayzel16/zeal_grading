@@ -37,21 +37,41 @@
 
         <form id="examForm" method="POST" action="{{ route('exam.submit', $attempt) }}">
             @csrf
-
+            
             @foreach($attempt->exam->questions as $index => $question)
                 <div class="mb-4">
                     <p><strong>Q{{ $index + 1 }}:</strong> {{ $question->question_text }}</p>
 
-                    @foreach($question->answers as $answer)
-                        <div>
-                            <label>
-                                <input type="radio"
-                                       name="answers[{{ $question->id }}]"
-                                       value="{{ $answer->id }}">
-                                {{ $answer->answer_text }}
-                            </label>
-                        </div>
-                    @endforeach
+                    {{-- ================= MULTIPLE CHOICE ================= --}}
+                    @if($question->type === 'multiple_choice')
+                        @foreach($question->answers as $answer)
+                            <div>
+                                <label>
+                                    <input type="radio"
+                                        name="answers[{{ $question->id }}]"
+                                        value="{{ $answer->id }}">
+                                    {{ $answer->answer_text }}
+                                </label>
+                            </div>
+                        @endforeach
+                    @endif
+
+                    {{-- ================= IDENTIFICATION ================= --}}
+                    @if($question->type === 'identification')
+                        <input type="text"
+                            name="answers[{{ $question->id }}]"
+                            class="form-control"
+                            placeholder="Your answer here">
+                    @endif
+
+                    {{-- ================= ESSAY ================= --}}
+                    @if($question->type === 'essay')
+                        <textarea name="answers[{{ $question->id }}]"
+                                class="form-control"
+                                rows="4"
+                                placeholder="Write your answer here..."></textarea>
+                    @endif
+
                 </div>
             @endforeach
 
