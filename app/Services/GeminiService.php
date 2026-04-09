@@ -30,54 +30,67 @@ class GeminiService implements AIProvider
         // =========================
         if ($type === 'multiple_choice') {
             $format = <<<FORMAT
-[
-    {
-        "question": "...",
-        "choices": ["A", "B", "C", "D"],
-        "correct_index": 0,
-        "explanation": "..."
-    }
-]
-FORMAT;
+    [
+        {
+            "question": "...",
+            "choices": ["A", "B", "C", "D"],
+            "correct_index": 0,
+            "explanation": "..."
+        }
+    ]
+    FORMAT;
         }
 
         if ($type === 'essay') {
             $format = <<<FORMAT
-[
-    {
-        "question": "...",
-        "expected_answer": "..."
-    }
-]
-FORMAT;
+    [
+        {
+            "question": "...",
+            "expected_answer": "..."
+        }
+    ]
+    FORMAT;
         }
 
         if ($type === 'identification') {
             $format = <<<FORMAT
-[
-    {
-        "question": "...",
-        "expected_answer": "..."
-    }
-]
-FORMAT;
+    [
+        {
+            "question": "...",
+            "expected_answer": "..."
+        }
+    ]
+    FORMAT;
         }
 
         // =========================
-        // 🧠 Prompt
+        // 🧠 STRICT PROMPT
         // =========================
         $prompt = <<<PROMPT
-Generate {$count} {$type} questions about {$topic}.
-Difficulty: {$difficulty}
+    Generate {$count} {$type} questions about {$topic}.
+    Difficulty: {$difficulty}
 
-IMPORTANT:
-- Return ONLY a valid JSON array
-- No markdown, no backticks, no explanation outside JSON
-- Ensure valid JSON (no trailing commas)
+    STRICT RULES:
+    - Return ONLY a valid JSON array
+    - NO markdown, NO explanation outside JSON
+    - Follow the format EXACTLY
 
-Format:
-{$format}
-PROMPT;
+    IMPORTANT:
+    - If type is identification or essay:
+    - DO NOT include choices
+    - DO NOT include correct_index
+    - DO NOT include explanation
+    - MUST include "expected_answer"
+
+    - If type is multiple_choice:
+    - MUST include 4 choices
+    - MUST include correct_index
+
+    If rules are violated, output is INVALID.
+
+    Format:
+    {$format}
+    PROMPT;
 
         try {
             $start = microtime(true);
@@ -121,7 +134,6 @@ PROMPT;
             $text = preg_replace('/```json|```/', '', $text);
             $text = trim($text);
 
-            // Extract JSON safely
             preg_match('/\[\s*{.*}\s*\]/s', $text, $matches);
             $jsonString = $matches[0] ?? null;
 
@@ -131,6 +143,8 @@ PROMPT;
             }
 
             $decoded = json_decode($jsonString, true);
+
+            Log::info('AI RAW DECODED', $decoded);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
                 Log::error('Invalid AI JSON', [
@@ -145,13 +159,12 @@ PROMPT;
             // =========================
             foreach ($decoded as &$item) {
 
-                // Common
                 $item['question'] = $item['question'] ?? '';
 
+                // ================= MCQ =================
                 if ($type === 'multiple_choice') {
                     $item['choices'] = $item['choices'] ?? [];
 
-                    // Ensure 4 choices
                     while (count($item['choices']) < 4) {
                         $item['choices'][] = '';
                     }
@@ -161,8 +174,24 @@ PROMPT;
                     $item['explanation'] = $item['explanation'] ?? '';
                 }
 
+                // ================= ESSAY / IDENTIFICATION =================
                 if (in_array($type, ['essay', 'identification'])) {
-                    $item['expected_answer'] = $item['expected_answer'] ?? '';
+
+                    // 🔥 FIX: If AI wrongly returns MCQ → convert it
+                    if (isset($item['choices'])) {
+                        Log::warning('AI returned MCQ instead of identification/essay', $item);
+
+                        $item['expected_answer'] =
+                            $item['choices'][$item['correct_index']] ?? '';
+                    }
+
+                    // 🔥 Fallback mapping (handles AI inconsistency)
+                    $item['expected_answer'] =
+                        $item['expected_answer']
+                        ?? $item['answer']
+                        ?? $item['correct_answer']
+                        ?? $item['solution']
+                        ?? '';
                 }
             }
 

@@ -33,13 +33,21 @@ class QuestionForm extends Component
     public function updatedType()
     {
         $this->reset([
+            'question',
             'choices',
             'correct_answer',
             'expected_answer',
-            'generatedQuestions' // 🔥 prevents mismatch bugs
-        ]);
+            ]);
 
-        $this->choices = [''];
+        // Reinitialize defaults
+        if ($this->type === 'multiple_choice') {
+            $this->choices = ['', '', '', ''];
+            $this->correct_answer = 0;
+        }
+
+        if (in_array($this->type, ['essay', 'identification'])) {
+            $this->expected_answer = '';
+        }
     }
 
     public function mount(Exam $exam)
@@ -135,7 +143,23 @@ class QuestionForm extends Component
             return;
         }
 
-        $this->generatedQuestions = $results;
+        // 🔥 FORCE CLEAN STRUCTURE (IMPORTANT FIX)
+        $clean = [];
+
+        foreach ($results as $q) {
+
+            $clean[] = [
+                'question' => $q['question'] ?? '',
+                'expected_answer' => $q['expected_answer']
+                    ?? ($q['choices'][$q['correct_index']] ?? ''),
+                'choices' => $q['choices'] ?? [],
+                'correct_index' => $q['correct_index'] ?? 0,
+                'explanation' => $q['explanation'] ?? '',
+            ];
+        }
+
+        // 🔥 THIS LINE FIXES LIVEWIRE REACTIVITY
+        $this->generatedQuestions = collect($clean)->toArray();
     }
 
     // =========================

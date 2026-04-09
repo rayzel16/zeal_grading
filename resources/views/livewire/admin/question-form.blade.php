@@ -16,7 +16,7 @@
         <h5>🤖 AI Generator</h5>
 
         <!-- TYPE -->
-        <select wire:model="type" class="form-control mb-2">
+        <select wire:model.live="type" class="form-control mb-2">
             <option value="multiple_choice">Multiple Choice</option>
             <option value="essay">Essay</option>
             <option value="identification">Identification</option>
@@ -123,61 +123,65 @@
     <hr class="my-4">
     <h4>✍️ Create Manually</h4>
 
-    <!-- ================= TYPE SELECT ================= -->
-    <div class="mb-3">
-        <label>Question Type</label>
-        <select wire:model="type" class="form-control">
-            <option value="multiple_choice">Multiple Choice</option>
-            <option value="essay">Essay</option>
-            <option value="identification">Identification</option>
-        </select>
-    </div>
+    <!-- 🔥 FORCE RE-RENDER -->
+    <div wire:key="manual-form-{{ $type }}">
 
-    <!-- ================= QUESTION ================= -->
-    <div class="mb-3">
-        <label>Question</label>
-        <textarea wire:model="question" class="form-control"></textarea>
-    </div>
-
-    <!-- ================= MULTIPLE CHOICE ================= -->
-    @if($type === 'multiple_choice')
+        <!-- TYPE SELECT -->
         <div class="mb-3">
-            <label>Choices</label>
+            <label>Question Type</label>
+            <select wire:model.live="type" class="form-control">
+                <option value="multiple_choice">Multiple Choice</option>
+                <option value="essay">Essay</option>
+                <option value="identification">Identification</option>
+            </select>
+        </div>
 
-            @foreach($choices as $index => $choice)
-                <div class="input-group mb-2">
+        <!-- QUESTION -->
+        <div class="mb-3">
+            <label>Question</label>
+            <textarea wire:model="question" class="form-control"></textarea>
+        </div>
 
-                    <div class="input-group-text">
-                        <input type="radio" wire:model="correct_answer" value="{{ $index }}">
+        <!-- MULTIPLE CHOICE -->
+        @if($type === 'multiple_choice')
+            <div class="mb-3">
+                <label>Choices</label>
+
+                @foreach($choices as $index => $choice)
+                    <div class="input-group mb-2">
+                        <div class="input-group-text">
+                            <input type="radio" wire:model="correct_answer" value="{{ $index }}">
+                        </div>
+
+                        <input type="text"
+                               wire:model="choices.{{ $index }}"
+                               class="form-control">
+
+                        <button type="button"
+                                wire:click="removeChoice({{ $index }})"
+                                class="btn btn-danger">
+                            X
+                        </button>
                     </div>
+                @endforeach
 
-                    <input type="text"
-                           wire:model="choices.{{ $index }}"
-                           class="form-control">
+                <button type="button"
+                        wire:click="addChoice"
+                        class="btn btn-primary btn-sm">
+                    + Add Choice
+                </button>
+            </div>
+        @endif
 
-                    <button type="button"
-                            wire:click="removeChoice({{ $index }})"
-                            class="btn btn-danger">
-                        X
-                    </button>
-                </div>
-            @endforeach
+        <!-- ESSAY / IDENTIFICATION -->
+        @if(in_array($type, ['essay', 'identification']))
+            <div class="mb-3">
+                <label>Expected Answer</label>
+                <textarea wire:model="expected_answer" class="form-control"></textarea>
+            </div>
+        @endif
 
-            <button type="button"
-                    wire:click="addChoice"
-                    class="btn btn-primary btn-sm">
-                + Add Choice
-            </button>
-        </div>
-    @endif
-
-    <!-- ================= ESSAY / IDENTIFICATION ================= -->
-    @if(in_array($type, ['essay', 'identification']))
-        <div class="mb-3">
-            <label>Expected Answer</label>
-            <textarea wire:model="expected_answer" class="form-control"></textarea>
-        </div>
-    @endif
+    </div>
 
     <!-- ================= SAVE ================= -->
     <button type="button" wire:click="save" class="btn btn-success">
