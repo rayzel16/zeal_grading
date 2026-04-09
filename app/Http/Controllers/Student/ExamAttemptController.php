@@ -127,6 +127,7 @@ class ExamAttemptController extends Controller
         }
 
         $attempt->score = $attempt->responses()->sum('score');
+        $attempt->submitted_at = now();
         $attempt->save();
 
         return redirect()->route('exam.result', $attempt->id);
